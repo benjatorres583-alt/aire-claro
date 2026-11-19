@@ -3,73 +3,208 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AIRE CLARO - Monitor de CO</title>
+<title>AIRE CLARO | Monitoreo de monóxido de carbono</title>
+<meta name="description" content="Sistema IoT de monitoreo y ventilación automática por monóxido de carbono en una sala de clases.">
 <style>
-  body{font-family:system-ui,sans-serif;margin:0;background:#f4f6f8;color:#1a2233}
-  header{background:#0b6e7a;color:#fff;padding:16px 20px}
-  header h1{margin:0}
-  main{max-width:900px;margin:auto;padding:16px}
-  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
-  .card{background:#fff;border-radius:12px;padding:14px;border-left:10px solid #999;line-height:1.5}
-  .verde{border-color:#2e9e4f}.amarillo{border-color:#e6b800}.rojo{border-color:#d62828}.calentando{border-color:#888}
-  .estado{font-weight:700;text-transform:uppercase}
-  .tabla{overflow-x:auto}
-  table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden}
-  th,td{padding:8px;text-align:left;border-bottom:1px solid #eee;font-size:14px}
-  h2{margin-top:24px}
-  small{color:#667}
+  :root{
+    --bg:#f2f5f8; --surface:#fff; --text:#14202d; --muted:#67758a; --line:#e2e8ef;
+    --brand:#0b6e7a; --brand-dark:#073f47;
+    --c:#6b7685; --c-bg:#edf0f3;
+  }
+  body.verde{--c:#1f9d55;--c-bg:#e6f6ec}
+  body.amarillo{--c:#c28f00;--c-bg:#fff5d1}
+  body.rojo{--c:#d62828;--c-bg:#fde8e8}
+  body.calentando,body.gris{--c:#6b7685;--c-bg:#edf0f3}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.4}
+  .wrap{max-width:960px;margin:0 auto;padding:0 16px}
+  header{background:linear-gradient(135deg,var(--brand-dark),var(--brand));color:#fff}
+  .head{padding:24px 0;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+  h1{margin:0;font-size:26px;letter-spacing:1px}
+  .sub{opacity:.85;font-size:14px;margin-top:3px}
+  .live{display:flex;align-items:center;gap:8px;font-size:13px;background:rgba(255,255,255,.12);padding:6px 12px;border-radius:999px}
+  .dot{width:9px;height:9px;border-radius:50%;background:#7CFFB2;animation:p 2s infinite}
+  .dot.off{background:#ffb4b4;animation:none}
+  @keyframes p{0%{box-shadow:0 0 0 0 rgba(124,255,178,.7)}70%{box-shadow:0 0 0 8px rgba(124,255,178,0)}100%{box-shadow:0 0 0 0 rgba(124,255,178,0)}}
+  main{padding:20px 0 36px}
+  .hero{background:var(--surface);border:1px solid var(--line);border-top:6px solid var(--c);border-radius:16px;padding:22px;display:grid;grid-template-columns:260px 1fr;gap:24px;align-items:center;box-shadow:0 2px 8px rgba(20,32,45,.05)}
+  .gauge{text-align:center}
+  .gauge svg{width:100%;max-width:260px;height:auto}
+  .gauge .num{font-size:46px;font-weight:800;fill:var(--text)}
+  .gauge .lbl{font-size:12px;fill:var(--muted)}
+  .arc{transition:stroke-dashoffset .8s ease,stroke .4s}
+  .status-pill{display:inline-block;background:var(--c-bg);color:var(--c);font-weight:800;text-transform:uppercase;letter-spacing:.8px;font-size:13px;padding:5px 14px;border-radius:999px}
+  .msg{font-size:24px;font-weight:700;margin:10px 0 6px}
+  .desc{color:var(--muted);font-size:15px}
+  .upd{margin-top:12px;font-size:12px;color:var(--muted)}
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px}
+  .m{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .m .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+  .m .v{font-size:26px;font-weight:800;margin-top:6px}
+  .m .v.on{color:var(--rojo,#d62828)}
+  h2{font-size:14px;margin:28px 0 10px;text-transform:uppercase;letter-spacing:.9px;color:var(--muted)}
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;overflow-x:auto}
+  svg.chart{width:100%;height:auto;display:block}
+  table{width:100%;border-collapse:collapse;min-width:520px}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px;border-bottom:1px solid var(--line)}
+  td{padding:9px 8px;border-bottom:1px solid var(--line);font-size:14px}
+  tr:last-child td{border-bottom:0}
+  .badge{font-size:11px;font-weight:700;text-transform:uppercase;padding:3px 9px;border-radius:999px;letter-spacing:.4px;background:#edf0f3;color:#6b7685}
+  .badge.verde{background:#e6f6ec;color:#1f9d55}
+  .badge.amarillo{background:#fff5d1;color:#a87900}
+  .badge.rojo{background:#fde8e8;color:#d62828}
+  .empty{color:var(--muted);padding:12px}
+  footer{color:var(--muted);font-size:12px;text-align:center;padding:0 16px 30px}
+  @media(max-width:720px){
+    .hero{grid-template-columns:1fr;text-align:center}
+    .metrics{grid-template-columns:repeat(2,1fr)}
+    .msg{font-size:21px}
+  }
 </style>
 </head>
-<body>
-<header><h1>AIRE CLARO</h1><div>Monitoreo de monóxido de carbono en salas</div></header>
-<main>
-  <h2>Estado actual por sala</h2>
-  <div id="salas" class="cards">Cargando...</div>
-  <h2>Ranking: salas con más CO (últimas 24 h)</h2>
-  <div class="tabla"><table id="ranking"></table></div>
+<body class="gris">
+<header>
+  <div class="wrap head">
+    <div>
+      <h1>AIRE CLARO</h1>
+      <div class="sub">Monitoreo y ventilación automática por monóxido de carbono</div>
+    </div>
+    <div class="live"><span id="dot" class="dot off"></span><span id="liveTxt">Conectando…</span></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <div class="gauge">
+      <svg viewBox="0 0 240 150" role="img" aria-label="Nivel de CO">
+        <path d="M 20 125 A 100 100 0 0 1 220 125" fill="none" stroke="#e8edf2" stroke-width="18" stroke-linecap="round"/>
+        <path id="arc" class="arc" d="M 20 125 A 100 100 0 0 1 220 125" fill="none" stroke="var(--c)" stroke-width="18" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16"/>
+        <text id="gnum" class="num" x="120" y="108" text-anchor="middle">--</text>
+        <text class="lbl" x="120" y="132" text-anchor="middle">NIVEL DE CO (0–1023)</text>
+      </svg>
+    </div>
+    <div>
+      <span id="pill" class="status-pill">Conectando</span>
+      <div id="msg" class="msg">Cargando estado…</div>
+      <div id="desc" class="desc"></div>
+      <div id="upd" class="upd"></div>
+    </div>
+  </section>
+
+  <section class="metrics">
+    <div class="m"><div class="k">Temperatura</div><div id="mt" class="v">--</div></div>
+    <div class="m"><div class="k">Humedad</div><div id="mh" class="v">--</div></div>
+    <div class="m"><div class="k">Ventanas</div><div id="mv" class="v">--</div></div>
+    <div class="m"><div class="k">Alarma</div><div id="ma" class="v">--</div></div>
+  </section>
+
+  <h2>Nivel de CO en las últimas 2 horas</h2>
+  <div class="panel"><div id="chart"></div></div>
+
   <h2>Últimas lecturas</h2>
-  <div class="tabla"><table id="ultimas"></table></div>
-  <p><small>Se actualiza cada 10 segundos. El valor de CO es una lectura relativa del sensor MQ-7 (0 a 1023), no ppm certificados.</small></p>
+  <div class="panel"><table id="ultimas"></table></div>
 </main>
+
+<footer>
+  Prototipo educativo. El valor de CO es una lectura relativa del sensor MQ-7, no un detector certificado. Se actualiza cada 10 segundos.
+</footer>
+
 <script>
 const SUPA_URL = "https://wchsrdghsgokbqwsvyyl.supabase.co";
 const SUPA_KEY = "sb_publishable_wsltYdpOS_i_YJB4n9EIIw_BCMZqW68";
+const OFFLINE_MS = 90 * 1000;
+const COLOR = {verde:"#1f9d55", amarillo:"#c28f00", rojo:"#d62828", gris:"#6b7685", calentando:"#6b7685"};
+const TEXTOS = {
+  verde:      ["Aire normal", "Los niveles de CO están dentro de lo esperado. Las ventanas permanecen cerradas."],
+  amarillo:   ["Precaución", "El nivel de CO está subiendo. El sistema está atento."],
+  rojo:       ["Alerta: CO alto", "Se activó la alarma y las ventanas se abren para ventilar la sala."],
+  calentando: ["Calibrando sensor", "El sensor MQ-7 se está calentando. Las lecturas se estabilizan en unos minutos."],
+  gris:       ["Sin señal", "No se están recibiendo datos del sensor. Revisando conexión…"]
+};
 
-async function cargar() {
-  try {
-    const desde = new Date(Date.now() - 24*3600*1000).toISOString();
-    const url = SUPA_URL + "/rest/v1/lecturas?select=*&creado=gte." + encodeURIComponent(desde) + "&order=creado.desc&limit=500";
-    const r = await fetch(url, { headers: { apikey: SUPA_KEY } });
-    const datos = await r.json();
-    if (!Array.isArray(datos)) throw new Error(JSON.stringify(datos));
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const hora = iso => new Date(iso).toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+const num = v => (v === null || v === undefined) ? "--" : v;
 
-    const porSala = {};
-    datos.forEach(d => { (porSala[d.sala] = porSala[d.sala] || []).push(d); });
+async function api(path){
+  const r = await fetch(SUPA_URL + "/rest/v1/" + path, { headers: { apikey: SUPA_KEY } });
+  const d = await r.json();
+  if(!r.ok) throw new Error(d.message || ("HTTP " + r.status));
+  return d;
+}
 
-    document.getElementById("salas").innerHTML = Object.keys(porSala).map(s => {
-      const u = porSala[s][0];
-      const hora = new Date(u.creado).toLocaleTimeString("es-CL");
-      return `<div class="card ${u.estado}"><b>${s}</b><div class="estado">${u.estado}</div>
-        CO: ${u.co_raw}<br>Temp: ${u.temperatura ?? "--"} °C<br>Humedad: ${u.humedad ?? "--"} %<br>
-        Ventanas: ${u.servo_abierto ? "abiertas" : "cerradas"}<br>Alarma: ${u.buzzer ? "sonando" : "apagada"}<br>
-        <small>Actualizado ${hora}</small></div>`;
-    }).join("") || "Sin datos todavía";
+function pintarEstado(u){
+  const viejo = !u || (Date.now() - new Date(u.creado).getTime() > OFFLINE_MS);
+  const est = viejo ? "gris" : (TEXTOS[u.estado] ? u.estado : "gris");
+  document.body.className = est;
+  const [titulo, desc] = TEXTOS[est];
+  $("pill").textContent = est === "gris" ? "Sin señal" : est;
+  $("msg").textContent = titulo;
+  $("desc").textContent = desc;
+  $("dot").className = "dot" + (est === "gris" ? " off" : "");
+  $("liveTxt").textContent = est === "gris" ? "Sin señal" : "En vivo";
 
-    const rank = Object.keys(porSala).map(s => ({
-      sala: s,
-      max: Math.max(...porSala[s].map(d => d.co_raw)),
-      rojos: porSala[s].filter(d => d.estado === "rojo").length
-    })).sort((a,b) => b.max - a.max);
-    document.getElementById("ranking").innerHTML =
-      "<tr><th>Sala</th><th>CO máximo</th><th>Lecturas en rojo</th></tr>" +
-      rank.map(x => `<tr><td>${x.sala}</td><td>${x.max}</td><td>${x.rojos}</td></tr>`).join("");
+  if(!u){ $("upd").textContent = "Aún no hay lecturas."; return; }
+  $("upd").textContent = "Última lectura: " + hora(u.creado);
+  const co = u.co_raw ?? 0;
+  $("gnum").textContent = num(u.co_raw);
+  $("arc").style.strokeDashoffset = 314.16 * (1 - Math.min(co, 1023) / 1023);
+  $("mt").textContent = u.temperatura == null ? "--" : u.temperatura + " °C";
+  $("mh").textContent = u.humedad == null ? "--" : u.humedad + " %";
+  $("mv").textContent = u.servo_abierto ? "Abiertas" : "Cerradas";
+  $("ma").textContent = u.buzzer ? "Sonando" : "Apagada";
+  $("ma").className = "v" + (u.buzzer ? " on" : "");
+}
 
-    document.getElementById("ultimas").innerHTML =
-      "<tr><th>Hora</th><th>Sala</th><th>CO</th><th>Estado</th><th>Temp</th><th>Hum</th></tr>" +
-      datos.slice(0, 15).map(d => `<tr><td>${new Date(d.creado).toLocaleTimeString("es-CL")}</td><td>${d.sala}</td>
-        <td>${d.co_raw}</td><td>${d.estado}</td><td>${d.temperatura ?? "--"}</td><td>${d.humedad ?? "--"}</td></tr>`).join("");
-  } catch (e) {
-    document.getElementById("salas").textContent = "Error al cargar datos: " + e.message;
+function grafico(datos, estActual){
+  if(!datos.length){ $("chart").innerHTML = '<div class="empty">Sin datos en las últimas 2 horas.</div>'; return; }
+  const W=900,H=260,L=44,R=12,T=14,B=28;
+  const t1 = Date.now(), t0 = t1 - 2*3600*1000;
+  const ymax = Math.max(100, Math.ceil(Math.max(...datos.map(d => d.co_raw||0)) / 100) * 100);
+  const x = t => L + (t - t0) / (t1 - t0) * (W - L - R);
+  const y = v => T + (1 - v / ymax) * (H - T - B);
+  const col = COLOR[estActual] || COLOR.verde;
+
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Nivel de CO en el tiempo">
+    <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".25"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>`;
+  for(let i=0;i<=4;i++){
+    const v = ymax*i/4, yy = y(v);
+    s += `<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="#e8edf2"/><text x="${L-8}" y="${yy+4}" font-size="11" fill="#67758a" text-anchor="end">${Math.round(v)}</text>`;
+    const t = t0 + (t1-t0)*i/4;
+    s += `<text x="${x(t)}" y="${H-8}" font-size="11" fill="#67758a" text-anchor="middle">${new Date(t).toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"})}</text>`;
+  }
+  const pts = datos.map(d => [x(new Date(d.creado).getTime()), y(d.co_raw||0)]);
+  const linea = pts.map(p => p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ");
+  const area = `${pts[0][0].toFixed(1)},${y(0)} ${linea} ${pts[pts.length-1][0].toFixed(1)},${y(0)}`;
+  s += `<polygon points="${area}" fill="url(#g)"/><polyline points="${linea}" fill="none" stroke="${col}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+  $("chart").innerHTML = s;
+}
+
+async function cargar(){
+  try{
+    const desde = new Date(Date.now() - 2*3600*1000).toISOString();
+    const [hist, recientes] = await Promise.all([
+      api("lecturas?select=creado,co_raw&creado=gte." + desde + "&order=creado.asc&limit=2000"),
+      api("lecturas?select=*&order=creado.desc&limit=12")
+    ]);
+    const ultima = recientes[0] || null;
+    pintarEstado(ultima);
+    const viejo = !ultima || (Date.now() - new Date(ultima.creado).getTime() > OFFLINE_MS);
+    grafico(hist, viejo ? "gris" : ultima.estado);
+
+    $("ultimas").innerHTML = recientes.length
+      ? "<tr><th>Hora</th><th>CO</th><th>Estado</th><th>Temp</th><th>Hum</th><th>Ventanas</th></tr>" +
+        recientes.map(d => `<tr><td>${hora(d.creado)}</td><td>${num(d.co_raw)}</td>
+          <td><span class="badge ${esc(d.estado||"")}">${esc(d.estado||"--")}</span></td>
+          <td>${d.temperatura == null ? "--" : d.temperatura + " °C"}</td><td>${d.humedad == null ? "--" : d.humedad + " %"}</td>
+          <td>${d.servo_abierto ? "Abiertas" : "Cerradas"}</td></tr>`).join("")
+      : '<tr><td class="empty">Sin lecturas todavía.</td></tr>';
+  }catch(e){
+    document.body.className = "gris";
+    $("msg").textContent = "No se pudieron cargar los datos";
+    $("desc").textContent = e.message;
+    $("dot").className = "dot off"; $("liveTxt").textContent = "Error";
   }
 }
 cargar();
