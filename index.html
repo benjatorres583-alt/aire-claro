@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AIRE CLARO - Monitor de CO</title>
+<style>
+  body{font-family:system-ui,sans-serif;margin:0;background:#f4f6f8;color:#1a2233}
+  header{background:#0b6e7a;color:#fff;padding:16px 20px}
+  header h1{margin:0}
+  main{max-width:900px;margin:auto;padding:16px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+  .card{background:#fff;border-radius:12px;padding:14px;border-left:10px solid #999;line-height:1.5}
+  .verde{border-color:#2e9e4f}.amarillo{border-color:#e6b800}.rojo{border-color:#d62828}.calentando{border-color:#888}
+  .estado{font-weight:700;text-transform:uppercase}
+  .tabla{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden}
+  th,td{padding:8px;text-align:left;border-bottom:1px solid #eee;font-size:14px}
+  h2{margin-top:24px}
+  small{color:#667}
+</style>
+</head>
+<body>
+<header><h1>AIRE CLARO</h1><div>Monitoreo de monóxido de carbono en salas</div></header>
+<main>
+  <h2>Estado actual por sala</h2>
+  <div id="salas" class="cards">Cargando...</div>
+  <h2>Ranking: salas con más CO (últimas 24 h)</h2>
+  <div class="tabla"><table id="ranking"></table></div>
+  <h2>Últimas lecturas</h2>
+  <div class="tabla"><table id="ultimas"></table></div>
+  <p><small>Se actualiza cada 10 segundos. El valor de CO es una lectura relativa del sensor MQ-7 (0 a 1023), no ppm certificados.</small></p>
+</main>
+<script>
+const SUPA_URL = "https://wchsrdghsgokbqwsvyyl.supabase.co";
+const SUPA_KEY = "sb_publishable_wsltYdpOS_i_YJB4n9EIIw_BCMZqW68";
+
+async function cargar() {
+  try {
+    const desde = new Date(Date.now() - 24*3600*1000).toISOString();
+    const url = SUPA_URL + "/rest/v1/lecturas?select=*&creado=gte." + encodeURIComponent(desde) + "&order=creado.desc&limit=500";
+    const r = await fetch(url, { headers: { apikey: SUPA_KEY } });
+    const datos = await r.json();
+    if (!Array.isArray(datos)) throw new Error(JSON.stringify(datos));
+
+    const porSala = {};
+    datos.forEach(d => { (porSala[d.sala] = porSala[d.sala] || []).push(d); });
+
+    document.getElementById("salas").innerHTML = Object.keys(porSala).map(s => {
+      const u = porSala[s][0];
+      const hora = new Date(u.creado).toLocaleTimeString("es-CL");
+      return `<div class="card ${u.estado}"><b>${s}</b><div class="estado">${u.estado}</div>
+        CO: ${u.co_raw}<br>Temp: ${u.temperatura ?? "--"} °C<br>Humedad: ${u.humedad ?? "--"} %<br>
+        Ventanas: ${u.servo_abierto ? "abiertas" : "cerradas"}<br>Alarma: ${u.buzzer ? "sonando" : "apagada"}<br>
+        <small>Actualizado ${hora}</small></div>`;
+    }).join("") || "Sin datos todavía";
+
+    const rank = Object.keys(porSala).map(s => ({
+      sala: s,
+      max: Math.max(...porSala[s].map(d => d.co_raw)),
+      rojos: porSala[s].filter(d => d.estado === "rojo").length
+    })).sort((a,b) => b.max - a.max);
+    document.getElementById("ranking").innerHTML =
+      "<tr><th>Sala</th><th>CO máximo</th><th>Lecturas en rojo</th></tr>" +
+      rank.map(x => `<tr><td>${x.sala}</td><td>${x.max}</td><td>${x.rojos}</td></tr>`).join("");
+
+    document.getElementById("ultimas").innerHTML =
+      "<tr><th>Hora</th><th>Sala</th><th>CO</th><th>Estado</th><th>Temp</th><th>Hum</th></tr>" +
+      datos.slice(0, 15).map(d => `<tr><td>${new Date(d.creado).toLocaleTimeString("es-CL")}</td><td>${d.sala}</td>
+        <td>${d.co_raw}</td><td>${d.estado}</td><td>${d.temperatura ?? "--"}</td><td>${d.humedad ?? "--"}</td></tr>`).join("");
+  } catch (e) {
+    document.getElementById("salas").textContent = "Error al cargar datos: " + e.message;
+  }
+}
+cargar();
+setInterval(cargar, 10000);
+</script>
+</body>
+</html>
