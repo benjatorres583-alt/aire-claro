@@ -5,82 +5,133 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AIRE CLARO | Monitoreo de monóxido de carbono</title>
 <meta name="description" content="Sistema IoT de monitoreo y ventilación automática por monóxido de carbono en una sala de clases.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#f2f5f8; --surface:#fff; --text:#14202d; --muted:#67758a; --line:#e2e8ef;
-    --brand:#0b6e7a; --brand-dark:#073f47;
-    --c:#6b7685; --c-bg:#edf0f3;
+    --sand:#fff4e6; --card:#fffdf9; --text:#3b2d28; --muted:#8a7468; --line:#f0dfcc;
+    --peach:#ffd3a8; --orange:#f2a26b; --coral:#e8805f; --sea:#5db5ae; --sea-d:#2f7f87;
+    --track:#f3e3d0;
+    --c:#a39489; --c-bg:#f1ebe4;
   }
-  body.verde{--c:#1f9d55;--c-bg:#e6f6ec}
-  body.amarillo{--c:#c28f00;--c-bg:#fff5d1}
-  body.rojo{--c:#d62828;--c-bg:#fde8e8}
-  body.calentando,body.gris{--c:#6b7685;--c-bg:#edf0f3}
+  body.verde{--c:#3f9e86;--c-bg:#e3f4ee}
+  body.amarillo{--c:#c98a1f;--c-bg:#fff0cc}
+  body.rojo{--c:#d94f3d;--c-bg:#fde6e1}
+  body.calentando,body.gris{--c:#a39489;--c-bg:#f1ebe4}
   *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.4}
-  .wrap{max-width:960px;margin:0 auto;padding:0 16px}
-  header{background:linear-gradient(135deg,var(--brand-dark),var(--brand));color:#fff}
-  .head{padding:24px 0;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
-  h1{margin:0;font-size:26px;letter-spacing:1px}
-  .sub{opacity:.85;font-size:14px;margin-top:3px}
-  .live{display:flex;align-items:center;gap:8px;font-size:13px;background:rgba(255,255,255,.12);padding:6px 12px;border-radius:999px}
-  .dot{width:9px;height:9px;border-radius:50%;background:#7CFFB2;animation:p 2s infinite}
-  .dot.off{background:#ffb4b4;animation:none}
-  @keyframes p{0%{box-shadow:0 0 0 0 rgba(124,255,178,.7)}70%{box-shadow:0 0 0 8px rgba(124,255,178,0)}100%{box-shadow:0 0 0 0 rgba(124,255,178,0)}}
-  main{padding:20px 0 36px}
-  .hero{background:var(--surface);border:1px solid var(--line);border-top:6px solid var(--c);border-radius:16px;padding:22px;display:grid;grid-template-columns:260px 1fr;gap:24px;align-items:center;box-shadow:0 2px 8px rgba(20,32,45,.05)}
+  html{scroll-behavior:smooth}
+  body{margin:0;font-family:"Nunito",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--sand);color:var(--text);line-height:1.45}
+  .wrap{max-width:980px;margin:0 auto;padding:0 18px}
+  h1,h2,.serif{font-family:"Fraunces",Georgia,"Times New Roman",serif}
+
+  /* ---------- Encabezado ---------- */
+  header{position:relative;background:linear-gradient(170deg,var(--peach) 0%,var(--orange) 100%);color:#4a2c1d;overflow:hidden;padding-bottom:46px}
+  .sun{position:absolute;right:-50px;top:-70px;width:240px;height:240px;border-radius:50%;background:radial-gradient(circle at 40% 40%,#fff1d8,#ffd9a8 70%);opacity:.75}
+  .head{position:relative;padding:26px 0 8px;display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}
+  h1{margin:0;font-size:34px;font-weight:800;letter-spacing:.5px}
+  .sub{font-size:15px;margin-top:2px;opacity:.85;max-width:430px}
+  .tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .live{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;background:rgba(255,253,249,.7);padding:7px 14px;border-radius:999px}
+  .dot{width:9px;height:9px;border-radius:50%;background:#2e9e6b;animation:p 2s infinite}
+  .dot.off{background:#b9a99c;animation:none}
+  @keyframes p{0%{box-shadow:0 0 0 0 rgba(46,158,107,.6)}70%{box-shadow:0 0 0 8px rgba(46,158,107,0)}100%{box-shadow:0 0 0 0 rgba(46,158,107,0)}}
+  .btn{font:inherit;font-weight:800;font-size:14px;border:0;border-radius:999px;padding:9px 18px;cursor:pointer;background:#4a2c1d;color:#fff4e6;transition:background .2s}
+  .btn:hover{background:#6b3f29}
+  .btn.ghost{background:rgba(255,253,249,.7);color:#4a2c1d}
+  .btn.ghost:hover{background:#fffdf9}
+  .btn:focus-visible,input:focus-visible{outline:3px solid var(--sea-d);outline-offset:2px}
+  .wave{position:absolute;left:0;right:0;bottom:-1px;width:100%;height:46px;display:block}
+
+  /* ---------- Contenido ---------- */
+  main{padding:6px 0 36px;margin-top:-6px}
+  .hero{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:24px;display:grid;grid-template-columns:270px 1fr;gap:26px;align-items:center;box-shadow:0 8px 28px rgba(232,128,95,.12);border-left:8px solid var(--c)}
   .gauge{text-align:center}
-  .gauge svg{width:100%;max-width:260px;height:auto}
-  .gauge .num{font-size:46px;font-weight:800;fill:var(--text)}
+  .gauge svg{width:100%;max-width:270px;height:auto}
+  .gauge .num{font-family:"Fraunces",Georgia,serif;font-size:50px;font-weight:800;fill:var(--text)}
   .gauge .lbl{font-size:12px;fill:var(--muted)}
   .arc{transition:stroke-dashoffset .8s ease,stroke .4s}
-  .status-pill{display:inline-block;background:var(--c-bg);color:var(--c);font-weight:800;text-transform:uppercase;letter-spacing:.8px;font-size:13px;padding:5px 14px;border-radius:999px}
-  .msg{font-size:24px;font-weight:700;margin:10px 0 6px}
-  .desc{color:var(--muted);font-size:15px}
-  .upd{margin-top:12px;font-size:12px;color:var(--muted)}
+  .status-pill{display:inline-block;background:var(--c-bg);color:var(--c);font-weight:800;font-size:14px;padding:5px 15px;border-radius:999px}
+  .msg{font-family:"Fraunces",Georgia,serif;font-size:28px;font-weight:800;margin:10px 0 6px;line-height:1.2}
+  .desc{color:var(--muted);font-size:16px;max-width:480px}
+  .upd{margin-top:12px;font-size:13px;color:var(--muted)}
   .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px}
-  .m{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
-  .m .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
-  .m .v{font-size:26px;font-weight:800;margin-top:6px}
-  .m .v.on{color:#d62828}
-  h2{font-size:14px;margin:28px 0 10px;text-transform:uppercase;letter-spacing:.9px;color:var(--muted)}
-  .panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;overflow-x:auto}
+  .m{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px}
+  .m .k{font-size:13px;color:var(--muted);font-weight:700}
+  .m .v{font-family:"Fraunces",Georgia,serif;font-size:28px;font-weight:800;margin-top:4px}
+  .m .v.on{color:#d94f3d}
+  h2{font-size:21px;margin:30px 0 10px;font-weight:800}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;overflow-x:auto}
   svg.chart{width:100%;height:auto;display:block}
   table{width:100%;border-collapse:collapse;min-width:520px}
-  th{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px;border-bottom:1px solid var(--line)}
+  th{font-size:13px;color:var(--muted);text-align:left;padding:8px;border-bottom:2px solid var(--line);font-weight:700}
   td{padding:9px 8px;border-bottom:1px solid var(--line);font-size:14px}
   tr:last-child td{border-bottom:0}
-  .badge{font-size:11px;font-weight:700;text-transform:uppercase;padding:3px 9px;border-radius:999px;letter-spacing:.4px;background:#edf0f3;color:#6b7685}
-  .badge.verde{background:#e6f6ec;color:#1f9d55}
-  .badge.amarillo{background:#fff5d1;color:#a87900}
-  .badge.rojo{background:#fde8e8;color:#d62828}
+  .badge{font-size:12px;font-weight:800;padding:3px 10px;border-radius:999px;background:#f1ebe4;color:#7d6d62}
+  .badge.verde{background:#e3f4ee;color:#2f7f68}
+  .badge.amarillo{background:#fff0cc;color:#96640a}
+  .badge.rojo{background:#fde6e1;color:#c0392b}
   .empty{color:var(--muted);padding:12px}
-  footer{color:var(--muted);font-size:12px;text-align:center;padding:0 16px 30px}
+
+  /* ---------- Panel docente ---------- */
+  #docente{margin-top:34px;border-top:2px dashed var(--orange);padding-top:6px}
+  .dhead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+  .dhead h2{margin:24px 0 6px}
+  .who{font-size:14px;color:var(--muted)}
+  .picker{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;margin:10px 0 6px}
+  label{font-size:13px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px}
+  input[type=date],input[type=text],input[type=password]{font:inherit;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--text);width:100%}
+  input[type=date]{width:auto;min-width:190px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{font:inherit;font-size:13px;font-weight:700;border:1.5px solid var(--orange);background:transparent;color:#a4572e;border-radius:999px;padding:5px 12px;cursor:pointer}
+  .chip:hover,.chip.sel{background:var(--orange);color:#fff}
+  .note{font-size:14px;color:var(--muted);margin:6px 0 0}
+  .alert{background:#fff0cc;border-radius:12px;padding:10px 14px;font-size:14px;color:#6d4a0a;margin-top:10px}
+  .sum{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0}
+  .sum .m .v{font-size:24px}
+
+  dialog{border:0;border-radius:22px;padding:26px;width:min(380px,92vw);background:var(--card);color:var(--text);box-shadow:0 20px 60px rgba(59,45,40,.35)}
+  dialog::backdrop{background:rgba(74,44,29,.45)}
+  dialog h3{font-family:"Fraunces",Georgia,serif;font-size:24px;margin:0 0 4px}
+  dialog .f{margin-top:14px}
+  dialog .acts{display:flex;gap:10px;margin-top:20px;justify-content:flex-end}
+  .err{color:#c0392b;font-size:14px;min-height:20px;margin-top:10px;font-weight:600}
+
+  footer{color:var(--muted);font-size:13px;text-align:center;padding:0 18px 34px;max-width:760px;margin:0 auto}
   @media(max-width:720px){
-    .hero{grid-template-columns:1fr;text-align:center}
-    .metrics{grid-template-columns:repeat(2,1fr)}
-    .msg{font-size:21px}
+    h1{font-size:28px}
+    .hero{grid-template-columns:1fr;text-align:center;border-left:1px solid var(--line);border-top:8px solid var(--c)}
+    .desc{margin:0 auto}
+    .metrics,.sum{grid-template-columns:repeat(2,1fr)}
+    .msg{font-size:24px}
   }
+  @media(prefers-reduced-motion:reduce){.dot{animation:none}.arc{transition:none}html{scroll-behavior:auto}}
 </style>
 </head>
 <body class="gris">
 <header>
+  <div class="sun"></div>
   <div class="wrap head">
     <div>
       <h1>AIRE CLARO</h1>
       <div class="sub">Monitoreo y ventilación automática por monóxido de carbono</div>
     </div>
-    <div class="live"><span id="dot" class="dot off"></span><span id="liveTxt">Conectando…</span></div>
+    <div class="tools">
+      <div class="live"><span id="dot" class="dot off"></span><span id="liveTxt">Conectando…</span></div>
+      <button id="btnIngreso" class="btn" type="button">Ingreso docente</button>
+    </div>
   </div>
+  <svg class="wave" viewBox="0 0 1440 46" preserveAspectRatio="none" aria-hidden="true"><path d="M0 22 C 180 46, 360 0, 540 18 S 900 44, 1080 20 S 1340 6, 1440 24 L1440 46 L0 46 Z" fill="#fff4e6"/></svg>
 </header>
 
 <main class="wrap">
   <section class="hero">
     <div class="gauge">
       <svg viewBox="0 0 240 150" role="img" aria-label="Nivel de CO">
-        <path d="M 20 125 A 100 100 0 0 1 220 125" fill="none" stroke="#e8edf2" stroke-width="18" stroke-linecap="round"/>
+        <path d="M 20 125 A 100 100 0 0 1 220 125" fill="none" stroke="#f3e3d0" stroke-width="18" stroke-linecap="round"/>
         <path id="arc" class="arc" d="M 20 125 A 100 100 0 0 1 220 125" fill="none" stroke="var(--c)" stroke-width="18" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16"/>
         <text id="gnum" class="num" x="120" y="108" text-anchor="middle">--</text>
-        <text class="lbl" x="120" y="132" text-anchor="middle">NIVEL DE CO (0–1023)</text>
+        <text class="lbl" x="120" y="132" text-anchor="middle">Nivel de CO (0–1023)</text>
       </svg>
     </div>
     <div>
@@ -103,19 +154,61 @@
 
   <h2>Últimas lecturas</h2>
   <div class="panel"><table id="ultimas"></table></div>
+
+  <!-- Panel que solo aparece al ingresar con una cuenta docente -->
+  <section id="docente" hidden>
+    <div class="dhead">
+      <h2>Registro por fecha</h2>
+      <div><span id="who" class="who"></span> <button id="btnSalir" class="btn ghost" type="button">Cerrar sesión</button></div>
+    </div>
+    <div class="picker">
+      <div>
+        <label for="fecha">Elige un día</label>
+        <input id="fecha" type="date">
+      </div>
+      <div id="chips" class="chips" aria-label="Días con registro"></div>
+    </div>
+    <div id="rango" class="note"></div>
+    <div id="aviso"></div>
+    <div id="detalle" hidden>
+      <div class="sum">
+        <div class="m"><div class="k">CO máximo</div><div id="sMax" class="v">--</div></div>
+        <div class="m"><div class="k">CO promedio</div><div id="sProm" class="v">--</div></div>
+        <div class="m"><div class="k">Tiempo en alerta</div><div id="sRojo" class="v">--</div></div>
+        <div class="m"><div class="k">Horas con datos</div><div id="sHoras" class="v">--</div></div>
+      </div>
+      <div class="panel"><div id="barras"></div></div>
+      <h2>Detalle por hora</h2>
+      <div class="panel"><table id="horas"></table></div>
+    </div>
+  </section>
 </main>
 
 <footer>
   Prototipo educativo. El valor de CO es una lectura relativa del sensor MQ-7, no un detector certificado. Los datos llegan en tiempo real por MQTT.
 </footer>
 
+<dialog id="dlg">
+  <form id="frm" autocomplete="off">
+    <h3>Ingreso docente</h3>
+    <div class="note">Con tu cuenta puedes consultar el registro de días anteriores.</div>
+    <div class="f"><label for="usr">Usuario</label><input id="usr" type="text" autocapitalize="none" required></div>
+    <div class="f"><label for="pwd">Clave</label><input id="pwd" type="password" required></div>
+    <div id="err" class="err" role="alert"></div>
+    <div class="acts">
+      <button id="btnCancelar" class="btn ghost" type="button">Cancelar</button>
+      <button id="btnEntrar" class="btn" type="submit">Entrar</button>
+    </div>
+  </form>
+</dialog>
+
 <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
 <script>
 // ====== CONFIGURACION (EMQX Cloud > Overview) ======
 const CFG = {
-  url:  "wss://cd9d7de1.ala.us-east-1.emqxsl.com:8084/mqtt",  // direccion de tu broker, puerto WebSocket seguro
-  user: "web",                                 // usuario con permiso de SOLO SUSCRIBIRSE
-  pass: "9979",                                // clave del usuario web
+  url:  "wss://cd9d7de1.ala.us-east-1.emqxsl.com:8084/mqtt",  // broker, puerto WebSocket seguro
+  user: "web",          // usuario publico: SOLO puede suscribirse a lectura, historial y conexion
+  pass: "9979",         // clave del usuario web
   base: "aireclaro",
   sala: "sala1"
 };
@@ -123,28 +216,30 @@ const CFG = {
 
 const OFFLINE_MS = 90 * 1000;
 const VENTANA_MS = 2 * 3600 * 1000;
-const COLOR = {verde:"#1f9d55", amarillo:"#c28f00", rojo:"#d62828", gris:"#6b7685", calentando:"#6b7685"};
+const COLOR = {verde:"#3f9e86", amarillo:"#c98a1f", rojo:"#d94f3d", gris:"#a39489", calentando:"#a39489"};
 const TEXTOS = {
   verde:      ["Aire normal", "Los niveles de CO están dentro de lo esperado. Las ventanas permanecen cerradas."],
   amarillo:   ["Precaución", "El nivel de CO está subiendo. El sistema está atento."],
   rojo:       ["Alerta: CO alto", "Se activó la alarma y las ventanas se abren para ventilar la sala."],
-  calentando: ["Calibrando sensor", "El sensor MQ-7 se está calentando. Las lecturas se estabilizan en unos minutos."],
+  calentando: ["Calibrando sensor", "El sensor MQ-7 se está calentando y ajustando. Las lecturas se estabilizan en unos minutos."],
   gris:       ["Sin señal", "No se están recibiendo datos del sensor. Revisando conexión…"]
 };
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad = n => String(n).padStart(2, "0");
 const hora = ms => ms ? new Date(ms).toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit",second:"2-digit"}) : "--";
 const nz = v => (v === null || v === undefined || Number.isNaN(Number(v))) ? null : Number(v);
-const topic = n => CFG.base + "/" + CFG.sala + "/" + n;
 
-// ---- Estado de la página ----
+// =====================================================
+//  PARTE PUBLICA: estado actual de la sala
+// =====================================================
 let brokerOk = false, brokerMsg = "Conectando con el servidor…";
-let conexion = null;          // "online" | "offline" | null (Last Will del Arduino)
-let ultima = null;            // última lectura
-let recientes = [];           // últimas 12 lecturas recibidas
-let vivos = [];               // puntos recibidos en esta sesión [{t, co}]
-let historial = [];           // puntos del historial retenido [{t, co}]
+let conexion = null;
+let ultima = null;
+let recientes = [];
+let vivos = [];
+let historial = [];
 
 function estadoActual(){
   if (!brokerOk || !ultima || conexion === "offline") return "gris";
@@ -157,7 +252,7 @@ function pintar(){
   document.body.className = est;
   let [titulo, desc] = TEXTOS[est];
   if (!brokerOk){ titulo = "Sin conexión con el servidor"; desc = brokerMsg; }
-  $("pill").textContent = est === "gris" ? "Sin señal" : est;
+  $("pill").textContent = est === "gris" ? "Sin señal" : (est === "calentando" ? "Calibrando" : est.charAt(0).toUpperCase() + est.slice(1));
   $("msg").textContent = titulo;
   $("desc").textContent = desc;
   $("dot").className = "dot" + (est === "gris" ? " off" : "");
@@ -198,17 +293,17 @@ function grafico(){
   const col = COLOR[estadoActual()] || COLOR.verde;
 
   let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Nivel de CO en el tiempo">
-    <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".25"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>`;
+    <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".3"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>`;
   for (let i = 0; i <= 4; i++){
     const v = ymax * i / 4, yy = y(v);
-    s += `<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="#e8edf2"/><text x="${L-8}" y="${yy+4}" font-size="11" fill="#67758a" text-anchor="end">${Math.round(v)}</text>`;
+    s += `<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="#f0dfcc"/><text x="${L-8}" y="${yy+4}" font-size="11" fill="#8a7468" text-anchor="end">${Math.round(v)}</text>`;
     const t = t0 + (t1 - t0) * i / 4;
-    s += `<text x="${x(t)}" y="${H-8}" font-size="11" fill="#67758a" text-anchor="${i === 4 ? "end" : "middle"}">${new Date(t).toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"})}</text>`;
+    s += `<text x="${x(t)}" y="${H-8}" font-size="11" fill="#8a7468" text-anchor="${i === 4 ? "end" : "middle"}">${new Date(t).toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"})}</text>`;
   }
   const pts = datos.map(d => [x(d.t), y(d.co || 0)]);
   const linea = pts.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ");
   const area = `${pts[0][0].toFixed(1)},${y(0)} ${linea} ${pts[pts.length-1][0].toFixed(1)},${y(0)}`;
-  s += `<polygon points="${area}" fill="url(#g)"/><polyline points="${linea}" fill="none" stroke="${col}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+  s += `<polygon points="${area}" fill="url(#g)"/><polyline points="${linea}" fill="none" stroke="${col}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
   $("chart").innerHTML = s;
 }
 
@@ -236,7 +331,6 @@ function alRecibir(top, payload, packet){
     const tsDisp = Number(j.ts) > 0 ? Number(j.ts) * 1000 : 0;
 
     if (nombre === "lectura"){
-      // Un mensaje en vivo es "de ahora"; uno retenido usa la hora que trae el Arduino (0 = desconocida)
       const ts = retenido ? tsDisp : Date.now();
       const r = { co: nz(j.co), t: nz(j.t), h: nz(j.h), estado: String(j.estado || ""), servo: !!j.servo, buzzer: !!j.buzzer, ts };
       ultima = r;
@@ -269,7 +363,8 @@ function iniciar(){
   });
   cliente.on("connect", () => {
     brokerOk = true; brokerMsg = "";
-    cliente.subscribe(CFG.base + "/" + CFG.sala + "/#", { qos: 0 });
+    const b = CFG.base + "/" + CFG.sala + "/";
+    cliente.subscribe([b + "lectura", b + "historial", b + "conexion"], { qos: 0 });
     pintar();
   });
   cliente.on("message", alRecibir);
@@ -278,10 +373,137 @@ function iniciar(){
   cliente.on("error", e => caido("No se pudo conectar: " + (e && e.message ? e.message : "error desconocido")));
 }
 
+// =====================================================
+//  PARTE DOCENTE: registro por fecha
+//  El acceso lo decide el broker: solo las cuentas con permiso
+//  para suscribirse a .../registro/# reciben estos datos.
+// =====================================================
+const registros = new Map();   // hora (epoch/3600) -> {e, max, prom, rojo, n}
+let docente = null, usuarioDoc = "", fechaSel = "";
+
+const diaDe = e => { const d = new Date(e * 1000); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); };
+const hoyStr = () => diaDe(Date.now() / 1000);
+const diaLargo = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d).toLocaleDateString("es-CL", {weekday:"long", day:"numeric", month:"long", year:"numeric"}); };
+const minTxt = seg => seg < 60 ? seg + " s" : (seg < 3600 ? Math.round(seg / 60) + " min" : (seg / 3600).toFixed(1).replace(".", ",") + " h");
+
+function recibirRegistro(top, payload){
+  let j; try { j = JSON.parse(payload.toString()); } catch (e) { return; }
+  if (!j || !(Number(j.e) > 1.7e9) || !(Number(j.n) > 0)) return;
+  registros.set(Math.floor(Number(j.e) / 3600), { e: Number(j.e), max: Number(j.max) || 0, prom: Number(j.prom) || 0, rojo: Number(j.rojo) || 0, n: Number(j.n) });
+  programar();
+}
+let pendiente = false;
+function programar(){ if (pendiente) return; pendiente = true; requestAnimationFrame(() => { pendiente = false; pintarDocente(); }); }
+
+function diasConDatos(){ return [...new Set([...registros.values()].map(r => diaDe(r.e)))].sort(); }
+
+function pintarDocente(){
+  if (!docente) return;
+  const dias = diasConDatos(), inp = $("fecha"), hoy = hoyStr();
+  if (!dias.length){
+    inp.disabled = true; inp.value = "";
+    $("chips").innerHTML = ""; $("rango").textContent = "";
+    $("detalle").hidden = true;
+    $("aviso").innerHTML = '<div class="alert">Todavía no hay registros guardados. Se guardan automáticamente cada hora mientras el Arduino está encendido y conectado.</div>';
+    return;
+  }
+  inp.disabled = false;
+  inp.min = dias[0]; inp.max = hoy;
+  if (!fechaSel || !inp.value) fechaSel = dias[dias.length - 1];
+  inp.value = fechaSel;
+  $("rango").textContent = "Hay registros desde el " + diaLargo(dias[0]) + (dias[0] === hoy ? "." : " hasta el " + diaLargo(dias[dias.length - 1]) + ".");
+  $("chips").innerHTML = dias.slice(-10).map(d => `<button type="button" class="chip${d === fechaSel ? " sel" : ""}" data-d="${d}">${d === hoy ? "Hoy" : d.slice(8) + "/" + d.slice(5, 7)}</button>`).join("");
+
+  if (fechaSel < dias[0] || fechaSel > hoy){
+    $("detalle").hidden = true;
+    $("aviso").innerHTML = `<div class="alert">${fechaSel > hoy ? "Esa fecha todavía no llega." : "El sistema empezó a registrar el " + esc(diaLargo(dias[0])) + ", así que no hay datos de antes."} Elige un día entre el ${esc(diaLargo(dias[0]))} y hoy.</div>`;
+    return;
+  }
+  const delDia = [...registros.values()].filter(r => diaDe(r.e) === fechaSel).sort((a, b) => a.e - b.e);
+  if (!delDia.length){
+    $("detalle").hidden = true;
+    $("aviso").innerHTML = `<div class="alert">No hay registros del ${esc(diaLargo(fechaSel))}: el sistema estuvo apagado o sin conexión. Los días con datos están marcados arriba.</div>`;
+    return;
+  }
+  $("aviso").innerHTML = ""; $("detalle").hidden = false;
+
+  const totalN = delDia.reduce((a, r) => a + r.n, 0);
+  const prom = delDia.reduce((a, r) => a + r.prom * r.n, 0) / totalN;
+  $("sMax").textContent = Math.max(...delDia.map(r => r.max));
+  $("sProm").textContent = Math.round(prom);
+  $("sRojo").textContent = minTxt(delDia.reduce((a, r) => a + r.rojo, 0));
+  $("sHoras").textContent = delDia.length;
+
+  // Grafico de barras: una barra por hora del dia (0-23)
+  const porHora = {}; delDia.forEach(r => { porHora[new Date(r.e * 1000).getHours()] = r; });
+  const W=900,H=240,L=44,R=10,T=12,B=28, ymax = Math.max(100, Math.ceil(Math.max(...delDia.map(r => r.max)) / 100) * 100);
+  const bw = (W - L - R) / 24, y = v => T + (1 - v / ymax) * (H - T - B);
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="CO máximo por hora">`;
+  for (let i = 0; i <= 4; i++){ const v = ymax * i / 4, yy = y(v); s += `<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="#f0dfcc"/><text x="${L-8}" y="${yy+4}" font-size="11" fill="#8a7468" text-anchor="end">${Math.round(v)}</text>`; }
+  for (let h = 0; h < 24; h++){
+    const x = L + h * bw;
+    if (h % 3 === 0) s += `<text x="${x + bw/2}" y="${H-8}" font-size="11" fill="#8a7468" text-anchor="middle">${pad(h)}:00</text>`;
+    const r = porHora[h]; if (!r) continue;
+    const col = r.rojo > 0 ? "#d94f3d" : "#5db5ae";
+    s += `<rect x="${x + 3}" y="${y(r.max)}" width="${bw - 6}" height="${Math.max(2, y(0) - y(r.max))}" rx="4" fill="${col}"><title>${pad(h)}:00 · máximo ${r.max} · promedio ${Math.round(r.prom)}</title></rect>`;
+  }
+  s += "</svg><div class='note'>Cada barra es el CO máximo de esa hora. Las barras rojas son horas en que sonó la alerta.</div>";
+  $("barras").innerHTML = s;
+
+  $("horas").innerHTML = "<tr><th>Hora</th><th>CO máximo</th><th>CO promedio</th><th>Tiempo en alerta</th><th>Tiempo medido</th></tr>" +
+    delDia.map(r => { const h = new Date(r.e * 1000).getHours();
+      return `<tr><td>${pad(h)}:00 a ${pad((h + 1) % 24)}:00</td><td>${r.max}</td><td>${Math.round(r.prom)}</td><td>${r.rojo ? minTxt(r.rojo) : "Sin alerta"}</td><td>${minTxt(Math.round(r.n * 0.5))}</td></tr>`; }).join("");
+}
+
+function mensajeLogin(t){ $("err").textContent = t; }
+
+function ingresar(u, p){
+  if (typeof mqtt === "undefined"){ mensajeLogin("No se pudo cargar la librería de conexión. Recarga la página."); return; }
+  $("btnEntrar").disabled = true; mensajeLogin("Verificando…");
+  let ok = false;
+  const c = mqtt.connect(CFG.url, { username: u, password: p, clientId: "doc-" + Math.random().toString(16).slice(2, 10), clean: true, reconnectPeriod: 0, connectTimeout: 10000 });
+  c.on("connect", () => {
+    c.subscribe(CFG.base + "/" + CFG.sala + "/registro/#", { qos: 0 }, (err, granted) => {
+      if (err || !granted || !granted.length || granted[0].qos === 128){
+        mensajeLogin("Esta cuenta no tiene permiso para ver los registros.");
+        $("btnEntrar").disabled = false; c.end(true); return;
+      }
+      ok = true; docente = c; usuarioDoc = u;
+      $("dlg").close(); $("frm").reset(); mensajeLogin(""); $("btnEntrar").disabled = false;
+      $("who").textContent = "Sesión: " + u;
+      $("docente").hidden = false; $("btnIngreso").hidden = true;
+      pintarDocente();
+      $("docente").scrollIntoView();
+    });
+  });
+  c.on("message", recibirRegistro);
+  c.on("error", e => {
+    if (ok) return;
+    const m = (e && e.message) ? e.message : "";
+    mensajeLogin(/bad user|not authorized|password|identifier/i.test(m) ? "Usuario o clave incorrectos." : "No se pudo conectar" + (m ? ": " + m : "."));
+    $("btnEntrar").disabled = false; c.end(true);
+  });
+  c.on("close", () => { if (ok && docente === c) cerrarSesion(); });
+}
+
+function cerrarSesion(){
+  if (docente){ const c = docente; docente = null; c.end(true); }
+  registros.clear(); fechaSel = "";
+  $("docente").hidden = true; $("btnIngreso").hidden = false;
+  window.scrollTo(0, 0);
+}
+
+$("btnIngreso").onclick = () => { mensajeLogin(""); $("dlg").showModal(); $("usr").focus(); };
+$("btnCancelar").onclick = () => $("dlg").close();
+$("btnSalir").onclick = cerrarSesion;
+$("frm").onsubmit = ev => { ev.preventDefault(); ingresar($("usr").value.trim(), $("pwd").value); };
+$("fecha").onchange = ev => { fechaSel = ev.target.value; if (!fechaSel) return; pintarDocente(); };
+$("chips").onclick = ev => { const d = ev.target.dataset && ev.target.dataset.d; if (d){ fechaSel = d; pintarDocente(); } };
+
 iniciar();
 pintar(); grafico(); tabla();
-setInterval(pintar, 1000);   // actualiza el aviso de "sin señal" aunque no lleguen mensajes
-setInterval(grafico, 15000); // desplaza la ventana de 2 horas
+setInterval(pintar, 1000);
+setInterval(grafico, 15000);
 </script>
 </body>
 </html>
