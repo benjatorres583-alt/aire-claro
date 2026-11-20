@@ -41,7 +41,7 @@
   .m{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
   .m .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
   .m .v{font-size:26px;font-weight:800;margin-top:6px}
-  .m .v.on{color:var(--rojo,#d62828)}
+  .m .v.on{color:#d62828}
   h2{font-size:14px;margin:28px 0 10px;text-transform:uppercase;letter-spacing:.9px;color:var(--muted)}
   .panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;overflow-x:auto}
   svg.chart{width:100%;height:auto;display:block}
@@ -85,7 +85,7 @@
     </div>
     <div>
       <span id="pill" class="status-pill">Conectando</span>
-      <div id="msg" class="msg">Cargando estado…</div>
+      <div id="msg" class="msg">Conectando con el sensor…</div>
       <div id="desc" class="desc"></div>
       <div id="upd" class="upd"></div>
     </div>
@@ -106,13 +106,23 @@
 </main>
 
 <footer>
-  Prototipo educativo. El valor de CO es una lectura relativa del sensor MQ-7, no un detector certificado. Se actualiza cada 10 segundos.
+  Prototipo educativo. El valor de CO es una lectura relativa del sensor MQ-7, no un detector certificado. Los datos llegan en tiempo real por MQTT.
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
 <script>
-const SUPA_URL = "https://wchsrdghsgokbqwsvyyl.supabase.co";
-const SUPA_KEY = "sb_publishable_wsltYdpOS_i_YJB4n9EIIw_BCMZqW68";
+// ====== CONFIGURACION (EMQX Cloud > Overview) ======
+const CFG = {
+  url:  "wss://cd9d7de1.ala.us-east-1.emqxsl.com:8084/mqtt",  // direccion de tu broker, puerto WebSocket seguro
+  user: "web",                                 // usuario con permiso de SOLO SUSCRIBIRSE
+  pass: "9979",                                // clave del usuario web
+  base: "aireclaro",
+  sala: "sala1"
+};
+// ===================================================
+
 const OFFLINE_MS = 90 * 1000;
+const VENTANA_MS = 2 * 3600 * 1000;
 const COLOR = {verde:"#1f9d55", amarillo:"#c28f00", rojo:"#d62828", gris:"#6b7685", calentando:"#6b7685"};
 const TEXTOS = {
   verde:      ["Aire normal", "Los niveles de CO están dentro de lo esperado. Las ventanas permanecen cerradas."],
@@ -124,92 +134,154 @@ const TEXTOS = {
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const hora = iso => new Date(iso).toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
-const num = v => (v === null || v === undefined) ? "--" : v;
+const hora = ms => ms ? new Date(ms).toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit",second:"2-digit"}) : "--";
+const nz = v => (v === null || v === undefined || Number.isNaN(Number(v))) ? null : Number(v);
+const topic = n => CFG.base + "/" + CFG.sala + "/" + n;
 
-async function api(path){
-  const r = await fetch(SUPA_URL + "/rest/v1/" + path, { headers: { apikey: SUPA_KEY } });
-  const d = await r.json();
-  if(!r.ok) throw new Error(d.message || ("HTTP " + r.status));
-  return d;
+// ---- Estado de la página ----
+let brokerOk = false, brokerMsg = "Conectando con el servidor…";
+let conexion = null;          // "online" | "offline" | null (Last Will del Arduino)
+let ultima = null;            // última lectura
+let recientes = [];           // últimas 12 lecturas recibidas
+let vivos = [];               // puntos recibidos en esta sesión [{t, co}]
+let historial = [];           // puntos del historial retenido [{t, co}]
+
+function estadoActual(){
+  if (!brokerOk || !ultima || conexion === "offline") return "gris";
+  if (!ultima.ts || Date.now() - ultima.ts > OFFLINE_MS) return "gris";
+  return TEXTOS[ultima.estado] ? ultima.estado : "gris";
 }
 
-function pintarEstado(u){
-  const viejo = !u || (Date.now() - new Date(u.creado).getTime() > OFFLINE_MS);
-  const est = viejo ? "gris" : (TEXTOS[u.estado] ? u.estado : "gris");
+function pintar(){
+  const est = estadoActual();
   document.body.className = est;
-  const [titulo, desc] = TEXTOS[est];
+  let [titulo, desc] = TEXTOS[est];
+  if (!brokerOk){ titulo = "Sin conexión con el servidor"; desc = brokerMsg; }
   $("pill").textContent = est === "gris" ? "Sin señal" : est;
   $("msg").textContent = titulo;
   $("desc").textContent = desc;
   $("dot").className = "dot" + (est === "gris" ? " off" : "");
-  $("liveTxt").textContent = est === "gris" ? "Sin señal" : "En vivo";
+  $("liveTxt").textContent = !brokerOk ? "Conectando…" : (est === "gris" ? "Sin señal" : "En vivo");
 
-  if(!u){ $("upd").textContent = "Aún no hay lecturas."; return; }
-  $("upd").textContent = "Última lectura: " + hora(u.creado);
-  const co = u.co_raw ?? 0;
-  $("gnum").textContent = num(u.co_raw);
-  $("arc").style.strokeDashoffset = 314.16 * (1 - Math.min(co, 1023) / 1023);
-  $("mt").textContent = u.temperatura == null ? "--" : u.temperatura + " °C";
-  $("mh").textContent = u.humedad == null ? "--" : u.humedad + " %";
-  $("mv").textContent = u.servo_abierto ? "Abiertas" : "Cerradas";
-  $("ma").textContent = u.buzzer ? "Sonando" : "Apagada";
-  $("ma").className = "v" + (u.buzzer ? " on" : "");
+  if (!ultima){
+    $("upd").textContent = brokerOk ? "Esperando la primera lectura…" : "";
+    return;
+  }
+  $("upd").textContent = "Última lectura: " + hora(ultima.ts);
+  const co = ultima.co ?? 0;
+  $("gnum").textContent = ultima.co ?? "--";
+  $("arc").style.strokeDashoffset = 314.16 * (1 - Math.min(Math.max(co, 0), 1023) / 1023);
+  $("mt").textContent = ultima.t == null ? "--" : ultima.t + " °C";
+  $("mh").textContent = ultima.h == null ? "--" : ultima.h + " %";
+  $("mv").textContent = ultima.servo ? "Abiertas" : "Cerradas";
+  $("ma").textContent = ultima.buzzer ? "Sonando" : "Apagada";
+  $("ma").className = "v" + (ultima.buzzer ? " on" : "");
 }
 
-function grafico(datos, estActual){
-  if(!datos.length){ $("chart").innerHTML = '<div class="empty">Sin datos en las últimas 2 horas.</div>'; return; }
+function puntosGrafico(){
+  const desde = Date.now() - VENTANA_MS;
+  const primerVivo = vivos.length ? vivos[0].t : Infinity;
+  return historial.filter(p => p.t < primerVivo).concat(vivos).filter(p => p.t >= desde);
+}
+
+function grafico(){
+  const datos = puntosGrafico();
+  if (datos.length < 2){
+    $("chart").innerHTML = '<div class="empty">Reuniendo datos… el gráfico aparece cuando hay al menos dos lecturas.</div>';
+    return;
+  }
   const W=900,H=260,L=44,R=12,T=14,B=28;
-  const t1 = Date.now(), t0 = t1 - 2*3600*1000;
-  const ymax = Math.max(100, Math.ceil(Math.max(...datos.map(d => d.co_raw||0)) / 100) * 100);
+  const t1 = Date.now(), t0 = t1 - VENTANA_MS;
+  const ymax = Math.max(100, Math.ceil(Math.max(...datos.map(d => d.co || 0)) / 100) * 100);
   const x = t => L + (t - t0) / (t1 - t0) * (W - L - R);
   const y = v => T + (1 - v / ymax) * (H - T - B);
-  const col = COLOR[estActual] || COLOR.verde;
+  const col = COLOR[estadoActual()] || COLOR.verde;
 
   let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Nivel de CO en el tiempo">
     <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".25"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>`;
-  for(let i=0;i<=4;i++){
-    const v = ymax*i/4, yy = y(v);
+  for (let i = 0; i <= 4; i++){
+    const v = ymax * i / 4, yy = y(v);
     s += `<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="#e8edf2"/><text x="${L-8}" y="${yy+4}" font-size="11" fill="#67758a" text-anchor="end">${Math.round(v)}</text>`;
-    const t = t0 + (t1-t0)*i/4;
-    s += `<text x="${x(t)}" y="${H-8}" font-size="11" fill="#67758a" text-anchor="middle">${new Date(t).toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"})}</text>`;
+    const t = t0 + (t1 - t0) * i / 4;
+    s += `<text x="${x(t)}" y="${H-8}" font-size="11" fill="#67758a" text-anchor="${i === 4 ? "end" : "middle"}">${new Date(t).toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"})}</text>`;
   }
-  const pts = datos.map(d => [x(new Date(d.creado).getTime()), y(d.co_raw||0)]);
-  const linea = pts.map(p => p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ");
+  const pts = datos.map(d => [x(d.t), y(d.co || 0)]);
+  const linea = pts.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ");
   const area = `${pts[0][0].toFixed(1)},${y(0)} ${linea} ${pts[pts.length-1][0].toFixed(1)},${y(0)}`;
   s += `<polygon points="${area}" fill="url(#g)"/><polyline points="${linea}" fill="none" stroke="${col}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
   $("chart").innerHTML = s;
 }
 
-async function cargar(){
-  try{
-    const desde = new Date(Date.now() - 2*3600*1000).toISOString();
-    const [hist, recientes] = await Promise.all([
-      api("lecturas?select=creado,co_raw&creado=gte." + desde + "&order=creado.asc&limit=2000"),
-      api("lecturas?select=*&order=creado.desc&limit=12")
-    ]);
-    const ultima = recientes[0] || null;
-    pintarEstado(ultima);
-    const viejo = !ultima || (Date.now() - new Date(ultima.creado).getTime() > OFFLINE_MS);
-    grafico(hist, viejo ? "gris" : ultima.estado);
-
-    $("ultimas").innerHTML = recientes.length
-      ? "<tr><th>Hora</th><th>CO</th><th>Estado</th><th>Temp</th><th>Hum</th><th>Ventanas</th></tr>" +
-        recientes.map(d => `<tr><td>${hora(d.creado)}</td><td>${num(d.co_raw)}</td>
-          <td><span class="badge ${esc(d.estado||"")}">${esc(d.estado||"--")}</span></td>
-          <td>${d.temperatura == null ? "--" : d.temperatura + " °C"}</td><td>${d.humedad == null ? "--" : d.humedad + " %"}</td>
-          <td>${d.servo_abierto ? "Abiertas" : "Cerradas"}</td></tr>`).join("")
-      : '<tr><td class="empty">Sin lecturas todavía.</td></tr>';
-  }catch(e){
-    document.body.className = "gris";
-    $("msg").textContent = "No se pudieron cargar los datos";
-    $("desc").textContent = e.message;
-    $("dot").className = "dot off"; $("liveTxt").textContent = "Error";
-  }
+function tabla(){
+  $("ultimas").innerHTML = recientes.length
+    ? "<tr><th>Hora</th><th>CO</th><th>Estado</th><th>Temp</th><th>Hum</th><th>Ventanas</th></tr>" +
+      recientes.map(d => `<tr><td>${hora(d.ts)}</td><td>${esc(d.co ?? "--")}</td>
+        <td><span class="badge ${esc(d.estado)}">${esc(d.estado)}</span></td>
+        <td>${d.t == null ? "--" : esc(d.t) + " °C"}</td><td>${d.h == null ? "--" : esc(d.h) + " %"}</td>
+        <td>${d.servo ? "Abiertas" : "Cerradas"}</td></tr>`).join("")
+    : '<tr><td class="empty">Sin lecturas todavía.</td></tr>';
 }
-cargar();
-setInterval(cargar, 10000);
+
+function alRecibir(top, payload, packet){
+  const nombre = top.split("/").pop();
+  const retenido = !!(packet && packet.retain);
+  const texto = payload.toString();
+
+  if (nombre === "conexion"){
+    conexion = texto.trim();
+  } else {
+    let j = null;
+    try { j = JSON.parse(texto); } catch (e) { return; }
+    if (!j || typeof j !== "object") return;
+    const tsDisp = Number(j.ts) > 0 ? Number(j.ts) * 1000 : 0;
+
+    if (nombre === "lectura"){
+      // Un mensaje en vivo es "de ahora"; uno retenido usa la hora que trae el Arduino (0 = desconocida)
+      const ts = retenido ? tsDisp : Date.now();
+      const r = { co: nz(j.co), t: nz(j.t), h: nz(j.h), estado: String(j.estado || ""), servo: !!j.servo, buzzer: !!j.buzzer, ts };
+      ultima = r;
+      recientes.unshift(r);
+      recientes = recientes.slice(0, 12);
+      if (ts && r.co !== null) vivos.push({ t: ts, co: r.co });
+      const desde = Date.now() - VENTANA_MS;
+      vivos = vivos.filter(p => p.t >= desde);
+    } else if (nombre === "historial" && Array.isArray(j.co)){
+      const base = retenido ? tsDisp : Date.now();
+      const paso = (Number(j.paso) || 60) * 1000;
+      historial = base ? j.co.map((v, i) => ({ t: base - (j.co.length - 1 - i) * paso, co: Number(v) })) : [];
+    }
+  }
+  pintar(); grafico(); tabla();
+}
+
+function iniciar(){
+  if (typeof mqtt === "undefined"){
+    brokerMsg = "No se pudo cargar la librería de conexión. Revisa tu internet y recarga.";
+    pintar(); return;
+  }
+  const cliente = mqtt.connect(CFG.url, {
+    username: CFG.user,
+    password: CFG.pass,
+    clientId: "web-" + Math.random().toString(16).slice(2, 10),
+    clean: true,
+    reconnectPeriod: 3000,
+    connectTimeout: 10000
+  });
+  cliente.on("connect", () => {
+    brokerOk = true; brokerMsg = "";
+    cliente.subscribe(CFG.base + "/" + CFG.sala + "/#", { qos: 0 });
+    pintar();
+  });
+  cliente.on("message", alRecibir);
+  const caido = msg => { brokerOk = false; brokerMsg = msg; pintar(); };
+  cliente.on("close", () => caido("Se perdió la conexión con el servidor. Reintentando…"));
+  cliente.on("error", e => caido("No se pudo conectar: " + (e && e.message ? e.message : "error desconocido")));
+}
+
+iniciar();
+pintar(); grafico(); tabla();
+setInterval(pintar, 1000);   // actualiza el aviso de "sin señal" aunque no lleguen mensajes
+setInterval(grafico, 15000); // desplaza la ventana de 2 horas
 </script>
 </body>
 </html>
-
